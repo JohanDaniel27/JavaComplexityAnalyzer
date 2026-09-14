@@ -6,6 +6,8 @@ import com.complexityanalyzer.parser.JavaFileParser;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.complexityanalyzer.metrics.ClassMetrics;
+import com.complexityanalyzer.metrics.ClassMetricsAnalyzer;
 
 import java.nio.file.Path;
 
@@ -48,5 +50,33 @@ public class Main {
 
             System.out.println("--------------------");
         }
+
+        ClassMetricsAnalyzer classAnalyzer =
+                new ClassMetricsAnalyzer();
+
+        ClassMetrics classResult =
+                classAnalyzer.analyzeClass(clazz);
+
+        System.out.println("===== CLASS METRICS =====");
+        System.out.println("Class: " +
+                classResult.getClassName());
+
+        System.out.println("Lines: " +
+                classResult.getLinesOfCode());
+
+        System.out.println("Methods: " +
+                classResult.getMethodCount());
+
+        System.out.println("Fields: " +
+                classResult.getFieldCount());
+
+        System.out.println("Total Complexity: " +
+                classResult.getTotalComplexity());
+
+        System.out.println("Average Complexity: " +
+                classResult.getAverageComplexity());
+
+        System.out.println("Max Nesting Depth: " +
+                classResult.getMaxNestingDepth());
     }
 }
