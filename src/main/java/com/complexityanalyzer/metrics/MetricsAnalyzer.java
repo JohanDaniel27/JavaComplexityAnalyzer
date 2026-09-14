@@ -6,6 +6,7 @@ public class MetricsAnalyzer {
 
     private final ASTMetricsAnalyzer astAnalyzer = new ASTMetricsAnalyzer();
     private final ComplexityAnalyzer complexityAnalyzer = new ComplexityAnalyzer();
+    private final NestingAnalyzer nestingAnalyzer = new NestingAnalyzer();
 
     public MethodMetrics analyzeMethod(MethodDeclaration method) {
 
@@ -21,12 +22,15 @@ public class MetricsAnalyzer {
 
         int complexity = complexityAnalyzer.calculate(method);
 
+        int nestingDepth = nestingAnalyzer.calculate(method);
+
         return new MethodMetrics(
                 name,
                 lines,
                 parameters,
                 statements,
-                complexity
+                complexity,
+                nestingDepth
         );
     }
 }

@@ -20,4 +20,17 @@ public class TestCode {
     public void printMessage() {
         System.out.println("Hello");
     }
+
+    public void test(int x) {
+
+        if (x > 0) {
+
+            for (int i = 0; i < 5; i++) {
+
+                if (i > 2) {
+                    System.out.println(i);
+                }
+            }
+        }
+    }
 }

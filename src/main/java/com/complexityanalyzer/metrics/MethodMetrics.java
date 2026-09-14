@@ -7,18 +7,21 @@ public class MethodMetrics {
     private final int parameterCount;
     private final int statementCount;
     private final int complexity;
+    private final int nestingDepth;
 
     public MethodMetrics(String methodName,
                          int linesOfCode,
                          int parameterCount,
                          int statementCount,
-                         int complexity) {
+                         int complexity,
+                         int nestingDepth) {
 
         this.methodName = methodName;
         this.linesOfCode = linesOfCode;
         this.parameterCount = parameterCount;
         this.statementCount = statementCount;
         this.complexity = complexity;
+        this.nestingDepth = nestingDepth;
     }
 
     public String getMethodName() {
@@ -39,5 +42,9 @@ public class MethodMetrics {
 
     public int getComplexity() {
         return complexity;
+    }
+
+    public int getNestingDepth() {
+        return nestingDepth;
     }
 }

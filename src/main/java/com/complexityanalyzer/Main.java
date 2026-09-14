@@ -43,6 +43,9 @@ public class Main {
             System.out.println("Complexity: " +
                     result.getComplexity());
 
+            System.out.println("Nesting Depth: " +
+                    result.getNestingDepth());
+
             System.out.println("--------------------");
         }
     }
