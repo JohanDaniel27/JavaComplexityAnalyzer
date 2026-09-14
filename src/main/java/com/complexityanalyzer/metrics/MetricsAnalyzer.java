@@ -4,6 +4,9 @@ import com.github.javaparser.ast.body.MethodDeclaration;
 
 public class MetricsAnalyzer {
 
+    private final ASTMetricsAnalyzer astAnalyzer = new ASTMetricsAnalyzer();
+    private final ComplexityAnalyzer complexityAnalyzer = new ComplexityAnalyzer();
+
     public MethodMetrics analyzeMethod(MethodDeclaration method) {
 
         String name = method.getNameAsString();
@@ -14,15 +17,16 @@ public class MetricsAnalyzer {
 
         int parameters = method.getParameters().size();
 
-        int statements = method.getBody()
-                .map(body -> body.getStatements().size())
-                .orElse(0);
+        int statements = astAnalyzer.countStatements(method);
+
+        int complexity = complexityAnalyzer.calculate(method);
 
         return new MethodMetrics(
                 name,
                 lines,
                 parameters,
-                statements
+                statements,
+                complexity
         );
     }
 }

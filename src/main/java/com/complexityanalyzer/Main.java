@@ -40,6 +40,9 @@ public class Main {
             System.out.println("Statements: " +
                     result.getStatementCount());
 
+            System.out.println("Complexity: " +
+                    result.getComplexity());
+
             System.out.println("--------------------");
         }
     }
