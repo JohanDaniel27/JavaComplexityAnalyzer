@@ -17,18 +17,27 @@ public class TestCode {
         return b;
     }
 
-    public void printMessage() {
-        System.out.println("Hello");
+    public void createUser(
+            String name,
+            String email,
+            String phone,
+            String city,
+            String state,
+            String country
+    ) {
     }
 
     public void test(int x) {
 
         if (x > 0) {
 
-            for (int i = 0; i < 5; i++) {
+            for (int i = 0; i < 10; i++) {
 
-                if (i > 2) {
-                    System.out.println(i);
+                while (x > 0) {
+
+                    if (i > 5) {
+                        System.out.println(i);
+                    }
                 }
             }
         }

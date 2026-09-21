@@ -8,6 +8,9 @@ import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.complexityanalyzer.metrics.ClassMetrics;
 import com.complexityanalyzer.metrics.ClassMetricsAnalyzer;
+import com.complexityanalyzer.smells.CodeSmell;
+import com.complexityanalyzer.smells.CodeSmellDetector;
+import java.util.List;
 
 import java.nio.file.Path;
 
@@ -25,6 +28,8 @@ public class Main {
                 cu.findFirst(ClassOrInterfaceDeclaration.class).get();
 
         MetricsAnalyzer analyzer = new MetricsAnalyzer();
+
+        CodeSmellDetector smellDetector = new CodeSmellDetector();
 
         for (MethodDeclaration method : clazz.getMethods()) {
 
@@ -49,6 +54,20 @@ public class Main {
                     result.getNestingDepth());
 
             System.out.println("--------------------");
+
+            List<CodeSmell> smells =
+                    smellDetector.detectMethodSmells(result);
+
+            for (CodeSmell smell : smells) {
+                System.out.println(
+                        "⚠ " + smell.getType()
+                                + " [" + smell.getSeverity() + "]"
+                );
+
+                System.out.println(
+                        "  " + smell.getMessage()
+                );
+            }
         }
 
         ClassMetricsAnalyzer classAnalyzer =
