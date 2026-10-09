@@ -110,17 +110,19 @@ public class ProjectAnalyzer {
                     );
                 }
 
-                int riskScore =
-                        riskCalculator.calculate(
-                                classMetrics,
-                                dependency,
-                                classSmells
-                        );
+                List<CodeSmell> allSmells = new ArrayList<>(classSmells);
 
-                String riskLevel =
-                        riskCalculator.getRiskLevel(
-                                riskScore
-                        );
+                for (MethodAnalysisResult method : methodResults) {
+                    allSmells.addAll(method.getSmells());
+                }
+
+                int riskScore = riskCalculator.calculate(
+                        classMetrics,
+                        dependency,
+                        allSmells
+                );
+
+                String riskLevel = riskCalculator.getRiskLevel(riskScore);
 
                 classResults.add(
                         new ClassAnalysisResult(
