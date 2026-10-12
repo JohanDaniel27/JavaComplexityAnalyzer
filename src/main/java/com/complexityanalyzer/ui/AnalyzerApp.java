@@ -1,7 +1,9 @@
-
 package com.complexityanalyzer.ui;
 
-import com.complexityanalyzer.analysis.*;
+import com.complexityanalyzer.analysis.ClassAnalysisResult;
+import com.complexityanalyzer.analysis.MethodAnalysisResult;
+import com.complexityanalyzer.analysis.ProjectAnalysisResult;
+import com.complexityanalyzer.analysis.ProjectAnalyzer;
 import com.complexityanalyzer.smells.CodeSmell;
 
 import javafx.application.Application;
@@ -23,6 +25,7 @@ public class AnalyzerApp extends Application {
 
     private final TableView<ClassAnalysisResult> table = new TableView<>();
     private final TextArea details = new TextArea();
+    private final TabPane tabs = new TabPane();
 
     private final Label folderLabel = new Label("No folder selected");
     private final Label summaryLabel = new Label("No analysis yet");
@@ -31,6 +34,12 @@ public class AnalyzerApp extends Application {
     private final Button chooseButton = new Button("Choose Folder");
     private final Button analyzeButton = new Button("Analyze Project");
     private final ProgressIndicator progress = new ProgressIndicator();
+
+    private final DashboardCharts dashboardCharts = new DashboardCharts();
+    private final DependencyGraphView graphView = new DependencyGraphView();
+
+    private Tab overviewTab;
+    private Tab dependencyTab;
 
     private Path selectedPath;
 
@@ -59,9 +68,13 @@ public class AnalyzerApp extends Application {
                 10, chooseButton, folderLabel, analyzeButton, progress
         );
 
-        summaryLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
+        summaryLabel.setStyle(
+                "-fx-font-size: 14px; -fx-font-weight: bold;"
+        );
 
-        VBox top = new VBox(12, title, subtitle, controls, summaryLabel, statusLabel);
+        VBox top = new VBox(
+                12, title, subtitle, controls, summaryLabel, statusLabel
+        );
         top.setPadding(new Insets(20));
 
         createColumns();
@@ -69,7 +82,9 @@ public class AnalyzerApp extends Application {
         details.setEditable(false);
         details.setWrapText(false);
         details.setPromptText("Select a class to view detailed analysis.");
-        details.setStyle("-fx-font-family: monospace; -fx-font-size: 13px;");
+        details.setStyle(
+                "-fx-font-family: monospace; -fx-font-size: 13px;"
+        );
 
         table.getSelectionModel().selectedItemProperty().addListener(
                 (obs, oldValue, selected) -> {
@@ -82,10 +97,32 @@ public class AnalyzerApp extends Application {
         SplitPane split = new SplitPane(table, details);
         split.setDividerPositions(0.55);
 
+        overviewTab = new Tab("Overview");
+        overviewTab.setClosable(false);
+        overviewTab.setContent(
+                new Label("Run analysis to view charts.")
+        );
+
+        Tab classesTab = new Tab("Classes", split);
+        classesTab.setClosable(false);
+
+        dependencyTab = new Tab("Dependencies");
+        dependencyTab.setClosable(false);
+        dependencyTab.setContent(
+                new Label("Run analysis to view the dependency graph.")
+        );
+
+        tabs.getTabs().addAll(
+                overviewTab, classesTab, dependencyTab
+        );
+
         BorderPane root = new BorderPane();
         root.setTop(top);
-        root.setCenter(split);
-        root.setStyle("-fx-font-family: 'Segoe UI'; -fx-background-color: #f4f6fa;");
+        root.setCenter(tabs);
+        root.setStyle(
+                "-fx-font-family: 'Segoe UI'; " +
+                        "-fx-background-color: #f4f6fa;"
+        );
 
         stage.setTitle("Java Complexity Analyzer");
         stage.setScene(new Scene(root, 1100, 700));
@@ -98,47 +135,64 @@ public class AnalyzerApp extends Application {
                 new TableColumn<>("Class");
 
         name.setCellValueFactory(data ->
-                new ReadOnlyStringWrapper(data.getValue().getClassName()));
+                new ReadOnlyStringWrapper(
+                        data.getValue().getClassName()
+                )
+        );
 
         TableColumn<ClassAnalysisResult, Integer> loc =
                 new TableColumn<>("LOC");
 
         loc.setCellValueFactory(data ->
                 new ReadOnlyObjectWrapper<>(
-                        data.getValue().getMetrics().getLinesOfCode()));
+                        data.getValue().getMetrics().getLinesOfCode()
+                )
+        );
 
         TableColumn<ClassAnalysisResult, Integer> methods =
                 new TableColumn<>("Methods");
 
         methods.setCellValueFactory(data ->
                 new ReadOnlyObjectWrapper<>(
-                        data.getValue().getMetrics().getMethodCount()));
+                        data.getValue().getMetrics().getMethodCount()
+                )
+        );
 
         TableColumn<ClassAnalysisResult, Integer> complexity =
                 new TableColumn<>("Complexity");
 
         complexity.setCellValueFactory(data ->
                 new ReadOnlyObjectWrapper<>(
-                        data.getValue().getMetrics().getTotalComplexity()));
+                        data.getValue().getMetrics().getTotalComplexity()
+                )
+        );
 
         TableColumn<ClassAnalysisResult, Integer> coupling =
                 new TableColumn<>("Coupling");
 
         coupling.setCellValueFactory(data ->
                 new ReadOnlyObjectWrapper<>(
-                        data.getValue().getDependency().getCoupling()));
+                        data.getValue().getDependency().getCoupling()
+                )
+        );
 
         TableColumn<ClassAnalysisResult, Integer> risk =
                 new TableColumn<>("Risk Score");
 
         risk.setCellValueFactory(data ->
-                new ReadOnlyObjectWrapper<>(data.getValue().getRiskScore()));
+                new ReadOnlyObjectWrapper<>(
+                        data.getValue().getRiskScore()
+                )
+        );
 
         TableColumn<ClassAnalysisResult, String> level =
                 new TableColumn<>("Risk Level");
 
         level.setCellValueFactory(data ->
-                new ReadOnlyStringWrapper(data.getValue().getRiskLevel()));
+                new ReadOnlyStringWrapper(
+                        data.getValue().getRiskLevel()
+                )
+        );
 
         table.getColumns().addAll(
                 name, loc, methods, complexity, coupling, risk, level
@@ -158,7 +212,11 @@ public class AnalyzerApp extends Application {
 
         if (folder != null) {
             selectedPath = folder.toPath();
-            folderLabel.setText(selectedPath.toAbsolutePath().toString());
+
+            folderLabel.setText(
+                    selectedPath.toAbsolutePath().toString()
+            );
+
             analyzeButton.setDisable(false);
             statusLabel.setText("Ready to analyze.");
         }
@@ -187,6 +245,15 @@ public class AnalyzerApp extends Application {
             ProjectAnalysisResult result = task.getValue();
 
             table.getItems().setAll(result.getClasses());
+
+            overviewTab.setContent(
+                    dashboardCharts.create(result)
+            );
+
+            dependencyTab.setContent(
+                    graphView.create(result.getClasses())
+            );
+
             updateSummary(result);
 
             details.clear();
@@ -195,7 +262,11 @@ public class AnalyzerApp extends Application {
                 table.getSelectionModel().selectFirst();
             }
 
-            statusLabel.setText("Analysis completed.");
+            statusLabel.setText(
+                    "Analysis completed. Classes found: "
+                            + result.getClasses().size()
+            );
+
             setBusy(false);
         });
 
@@ -210,8 +281,11 @@ public class AnalyzerApp extends Application {
             alert.setTitle("Analysis Failed");
             alert.setHeaderText("Could not analyze this project");
             alert.setContentText(
-                    error == null ? "Unknown error" : error.getMessage()
+                    error == null
+                            ? "Unknown error"
+                            : error.getMessage()
             );
+
             alert.showAndWait();
         });
 
@@ -224,6 +298,7 @@ public class AnalyzerApp extends Application {
 
         chooseButton.setDisable(busy);
         analyzeButton.setDisable(busy || selectedPath == null);
+
         progress.setVisible(busy);
         progress.setManaged(busy);
     }
@@ -262,20 +337,42 @@ public class AnalyzerApp extends Application {
         StringBuilder out = new StringBuilder();
         var metrics = result.getMetrics();
 
-        out.append("CLASS: ").append(result.getClassName()).append("\n");
-        out.append("File: ").append(result.getSourceFile()).append("\n");
-        out.append("Risk: ").append(result.getRiskLevel())
-                .append(" (").append(result.getRiskScore()).append("/100)\n\n");
+        out.append("CLASS: ")
+                .append(result.getClassName()).append("\n");
+
+        out.append("File: ")
+                .append(result.getSourceFile()).append("\n");
+
+        out.append("Risk: ")
+                .append(result.getRiskLevel())
+                .append(" (").append(result.getRiskScore())
+                .append("/100)\n\n");
 
         out.append("CLASS METRICS\n");
-        out.append("Lines: ").append(metrics.getLinesOfCode()).append("\n");
-        out.append("Methods: ").append(metrics.getMethodCount()).append("\n");
-        out.append("Fields: ").append(metrics.getFieldCount()).append("\n");
-        out.append("Total complexity: ").append(metrics.getTotalComplexity()).append("\n");
-        out.append("Average complexity: ").append(metrics.getAverageComplexity()).append("\n");
-        out.append("Maximum nesting: ").append(metrics.getMaxNestingDepth()).append("\n");
-        out.append("Coupling: ").append(result.getDependency().getCoupling()).append("\n");
-        out.append("Dependencies: ").append(result.getDependency().getDependencies()).append("\n\n");
+        out.append("Lines: ")
+                .append(metrics.getLinesOfCode()).append("\n");
+
+        out.append("Methods: ")
+                .append(metrics.getMethodCount()).append("\n");
+
+        out.append("Fields: ")
+                .append(metrics.getFieldCount()).append("\n");
+
+        out.append("Total complexity: ")
+                .append(metrics.getTotalComplexity()).append("\n");
+
+        out.append("Average complexity: ")
+                .append(metrics.getAverageComplexity()).append("\n");
+
+        out.append("Maximum nesting: ")
+                .append(metrics.getMaxNestingDepth()).append("\n");
+
+        out.append("Coupling: ")
+                .append(result.getDependency().getCoupling()).append("\n");
+
+        out.append("Dependencies: ")
+                .append(result.getDependency().getDependencies())
+                .append("\n\n");
 
         appendSmells(out, "CLASS CODE SMELLS", result.getSmells());
 
@@ -286,11 +383,21 @@ public class AnalyzerApp extends Application {
             var m = method.getMetrics();
 
             out.append("\n").append(m.getMethodName()).append("\n");
-            out.append("  LOC: ").append(m.getLinesOfCode()).append("\n");
-            out.append("  Parameters: ").append(m.getParameterCount()).append("\n");
-            out.append("  Statements: ").append(m.getStatementCount()).append("\n");
-            out.append("  Complexity: ").append(m.getComplexity()).append("\n");
-            out.append("  Nesting: ").append(m.getNestingDepth()).append("\n");
+
+            out.append("  LOC: ")
+                    .append(m.getLinesOfCode()).append("\n");
+
+            out.append("  Parameters: ")
+                    .append(m.getParameterCount()).append("\n");
+
+            out.append("  Statements: ")
+                    .append(m.getStatementCount()).append("\n");
+
+            out.append("  Complexity: ")
+                    .append(m.getComplexity()).append("\n");
+
+            out.append("  Nesting: ")
+                    .append(m.getNestingDepth()).append("\n");
 
             appendSmells(out, "  Code smells", method.getSmells());
         }
@@ -311,9 +418,16 @@ public class AnalyzerApp extends Application {
         }
 
         for (CodeSmell smell : smells) {
-            out.append("  - ").append(smell.getType())
-                    .append(" [").append(smell.getSeverity()).append("]\n");
-            out.append("    ").append(smell.getMessage()).append("\n");
+
+            out.append("  - ")
+                    .append(smell.getType())
+                    .append(" [")
+                    .append(smell.getSeverity())
+                    .append("]\n");
+
+            out.append("    ")
+                    .append(smell.getMessage())
+                    .append("\n");
         }
     }
 
