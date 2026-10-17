@@ -18,45 +18,64 @@ The analyzer uses **JavaParser** to parse source files into an Abstract Syntax T
 
 ### Method metrics
 
-- Method name
-- Source line span
-- Parameter count
-- Recursive AST statement count
-- Cyclomatic-complexity estimate
-- Maximum nesting depth
+- Method name and source line span (start to end line)
+- Parameter count and AST statement count
+- Cyclomatic complexity estimate
+- Cognitive complexity (SonarSource G. Ann Campbell specification)
+- Maximum control flow nesting depth
+- Line breakdown: Non-Comment Source Lines of Code (NCLOC), Comment Lines (CLOC), and Blank Lines
 
 ### Class metrics
 
 - Class/interface name
-- Source line span
-- Method count
-- Field-declaration count
-- Total method complexity
-- Average method complexity
+- Physical line count (LOC), NCLOC, CLOC, and Blank Lines
+- Method count and field count
+- Total and average cyclomatic complexity
+- Total and average cognitive complexity
 - Maximum method nesting depth
+- Weighted Methods per Class (WMC) and Response for a Class (RFC)
+- Lack of Cohesion in Methods (LCOM4 via Union-Find connected components)
 
-### Code-smell detection
+### Code-smell and clone detection
 
-The current detector uses configurable-in-code heuristic thresholds to flag:
+The smell detector flags structural flaws and attaches exact `SourceLocation` (file, start/end line) and actionable `RefactoringAdvice`:
 
-| Code smell | Current rule | Severity |
-|---|---|---|
-| Long Method | Method line span > 50 | High |
-| High Complexity | Cyclomatic complexity > 10 | High |
-| Deep Nesting | Nesting depth > 3 | Medium |
-| Too Many Parameters | Parameter count > 5 | Medium |
-| Large Class | Class line span > 300 | High |
+| Code smell | Detection rule | Severity | Actionable Advice |
+|---|---|---|---|
+| Long Method | Method line span > 50 | High | Extract Method |
+| High Cyclomatic Complexity | Cyclomatic complexity > 10 | High | Replace Conditional with Polymorphism / Extract Method |
+| High Cognitive Complexity | Cognitive complexity > 15 | High | Simplify Control Flow / Guard Clauses |
+| Deep Nesting | Nesting depth > 3 | Medium | Extract Method / Guard Clause |
+| Too Many Parameters | Parameter count > 5 | Medium | Introduce Parameter Object |
+| Large Class | Class line span > 300 | High | Extract Class |
+| God Class | Methods ≥ 20, LOC ≥ 500, LCOM4 ≥ 3 | High | Apply Single Responsibility Principle / Extract Class |
+| Data Class | Fields ≥ 3, avg complexity ≤ 2, low WMC | Low | Move Behavior |
+| Low Cohesion | LCOM4 > 2 and Methods > 3 | Medium | Extract Class for separated components |
+| Brain Method | Lines > 65 and Complexity > 8 | High | Decompose Method |
+| Duplicate Code (Clones) | AST sliding-window sequence matching (Type-2, ≥6 stmts) | Info/Med | Extract Method / Pull Up Method |
 
-These thresholds are project choices, not universal standards. The rules can be adjusted in `CodeSmellDetector`.
+### Architecture and dependency analysis
 
-### Dependency and coupling analysis
+- **Type resolution:** `TypeResolver` indexes project declarations with FQNs and packages to eliminate simple-name collisions.
+- **Dependency graph:** Computes incoming (afferent) and outgoing (efferent) coupling for every class.
+- **Cycle detection:** Tarjan's Strongly Connected Components algorithm detects circular dependency chains at both class and package level.
+- **Package metrics:** Calculates Afferent Coupling ($C_a$), Efferent Coupling ($C_e$), Instability ($I$), Abstractness ($A$), and Distance from Main Sequence ($D$).
+- **Graph centrality:** Calculates in-degree, out-degree, and iterative PageRank to identify architectural hub classes.
 
-- Identify references to class/interface types whose simple names exist in the scanned project.
-- Collect distinct dependencies for each class/interface.
-- Calculate a simple coupling count as the number of distinct detected project dependencies.
-- Draw dependency arrows in the JavaFX Dependencies tab.
+### Git history and maintenance hotspots
 
-An arrow `A → B` means that class A is detected as depending on class B.
+- Scans Git history using **JGit** (pure Java, cross-platform, no external `git.exe` dependency).
+- Measures commit frequency, total churn (lines added + deleted), distinct author count, and last commit timestamp.
+- **Hotspot score:** Transparently ranks classes:
+  $$\text{HotspotScore} = 0.5 \times \text{Norm}(\text{CommitCount}) + 0.5 \times \text{Norm}(\text{Complexity})$$
+- Tiers: `CRITICAL_HOTSPOT`, `HIGH_HOTSPOT`, `MODERATE`, `LOW`. Gracefully degrades if the folder is not a Git repository.
+
+### Quality regression and reporting
+
+- **Snapshots:** Persist and reload project baselines (`.analyzer-snapshot.json`) with Jackson.
+- **Regression diffs:** Track changes between baseline and current analysis (added/removed/modified classes, $\Delta\text{LOC}$, $\Delta\text{Complexity}$, new vs resolved smells).
+- **Configurable quality gates:** Evaluate analysis against Standard, Strict, or Permissive rule presets.
+- **Export formats:** Export comprehensive analysis results to HTML (interactive with CSS badges), JSON, CSV (`classes.csv` and `methods.csv`), and Markdown (for CI/CD pull request summaries).
 
 ### Heuristic risk score
 
@@ -77,15 +96,16 @@ Risk levels:
 - **HIGH:** 51–75
 - **CRITICAL:** 76–100
 
-The current risk calculation includes class-level findings and method-level findings associated with that class. Review the underlying metrics and findings rather than treating the score as an absolute quality judgement.
-
 ### JavaFX desktop interface
 
-The application currently provides three tabs:
+The desktop interface provides six tabs:
 
-- **Overview:** risk-distribution pie chart and a bar chart of up to 10 classes ordered by total complexity.
-- **Classes:** a table of classes with LOC, method count, total complexity, coupling, risk score, and risk level. Selecting a row displays class metrics, dependencies, code smells, and method details.
-- **Dependencies:** a visual graph of detected class dependencies.
+1. **Overview:** Executive KPI cards (Classes, Methods, NCLOC, Smells, Cycles, Clones, Quality Gate status), risk distribution pie chart, cyclomatic & cognitive complexity bar charts, and top maintenance hotspots.
+2. **Classes:** Searchable, filterable table (by risk level and smell status). Selecting a class displays comprehensive metrics, detected smells with refactoring advice, and loads the source in the interactive `CodeViewerPane` with line-range highlighting.
+3. **Dependencies:** Interactive class dependency graph with circular dependency edges highlighted in red, tooltips with metrics, and pan/scroll navigation.
+4. **Hotspots:** Table of classes ranked by maintenance risk, showing churn, commit counts, and severity tiers.
+5. **Quality & Snapshots:** Quality Gate evaluation, preset selector, baseline snapshot saving, regression comparison, and multi-format report exporter.
+6. **Diagnostics:** Reports any parsing warnings or syntax problems encountered in partially analyzable projects.
 
 ## Technology stack
 
@@ -96,6 +116,10 @@ The application currently provides three tabs:
 | JavaParser Core 3.28.2 | Java source parsing and AST traversal |
 | JavaFX Controls 25.0.4 | Desktop interface, tables, controls, and charts |
 | JavaFX Maven Plugin 0.0.8 | Launching the JavaFX application with Maven |
+| JGit 7.1.0 | Pure Java Git commit history and churn analysis |
+| Jackson 2.18.2 | Snapshot serialization and JSON report export |
+| JUnit 5.11.4 | Automated unit and integration testing framework |
+| AssertJ 3.27.3 | Fluent test assertions |
 
 ## Requirements
 
@@ -185,73 +209,34 @@ The analysis layer is separate from the user interface. `ProjectAnalyzer` coordi
 JavaComplexityAnalyzer/
 ├── pom.xml
 ├── README.md
-├── testcode/                         # Sample Java source files for testing
+├── testcode/                                 # Sample Java source files for testing
 └── src/
-    └── main/
-        └── java/
-            └── com/
-                └── complexityanalyzer/
-                    ├── Main.java
-                    ├── analysis/
-                    │   ├── MethodAnalysisResult.java
-                    │   ├── ClassAnalysisResult.java
-                    │   ├── ProjectAnalysisResult.java
-                    │   ├── RiskCalculator.java
-                    │   └── ProjectAnalyzer.java
-                    ├── dependency/
-                    │   ├── DependencyAnalyzer.java
-                    │   └── DependencyResult.java
-                    ├── metrics/
-                    │   ├── MethodMetrics.java
-                    │   ├── MetricsAnalyzer.java
-                    │   ├── ASTMetricsAnalyzer.java
-                    │   ├── ComplexityAnalyzer.java
-                    │   ├── NestingAnalyzer.java
-                    │   ├── ClassMetrics.java
-                    │   └── ClassMetricsAnalyzer.java
-                    ├── parser/
-                    │   ├── JavaFileParser.java
-                    │   └── ProjectScanner.java
-                    ├── smells/
-                    │   ├── CodeSmell.java
-                    │   └── CodeSmellDetector.java
-                    └── ui/
-                        ├── AnalyzerApp.java
-                        ├── DashboardCharts.java
-                        └── DependencyGraphView.java
+    ├── main/java/com/complexityanalyzer/
+    │   ├── Main.java
+    │   ├── analysis/                         # ProjectAnalyzer, RiskCalculator, Diagnostics, Results
+    │   ├── architecture/                     # CycleDetector, GraphCentrality, PackageGraph
+    │   ├── dependency/                       # TypeResolver, DependencyAnalyzer, DependencyResult
+    │   ├── export/                           # Html, Json, Csv, Markdown report exporters
+    │   ├── git/                              # GitHistoryAnalyzer, HotspotRanker, FileGitStats
+    │   ├── metrics/                          # Cyclomatic, Cognitive, Cohesion (LCOM4), Lines (NCLOC)
+    │   ├── parser/                           # JavaFileParser, ProjectScanner, ParseFileResult
+    │   ├── qualitygate/                      # QualityGateConfig, Evaluator, Violations, Results
+    │   ├── regression/                       # SnapshotManager, SnapshotComparator, Diffs
+    │   ├── smells/                           # CodeSmellDetector, DuplicateCodeDetector, Locations, Advice
+    │   └── ui/                               # AnalyzerApp, DashboardCharts, DependencyGraphView, CodeViewerPane
+    └── test/
+        ├── java/com/complexityanalyzer/      # 10 test suites covering all analyzers & engine
+        └── resources/samples/                # Test fixture files (simple, complex, cycles, broken)
 ```
-
-The exact tree may vary slightly as the project evolves.
 
 ## Design choices
 
 - **AST-based analysis:** analyse parsed Java constructs rather than counting keywords in raw text.
-- **Separation of concerns:** scanning, parsing, metrics, smells, dependencies, risk scoring, and presentation are separate components.
-- **Reusable result models:** method, class, and project results are represented as objects so the console and GUI can consume the same analysis output.
-- **Background analysis:** the JavaFX interface uses a background task for the analysis operation.
-- **Transparent heuristics:** rules and score contributions are documented and can be revised as testing improves.
-
-## Current limitations
-
-- **Line span is not comment-free LOC.** The current line metric uses the AST node's start and end line numbers, so blank lines and comments inside that range can be included.
-- **Cyclomatic complexity is an estimate based on the AST rules currently implemented.** Its treatment of constructs such as `switch` should be validated against a documented metric convention before comparing scores with external tools.
-- **Dependencies use simple class names.** Different packages containing classes with the same name can be ambiguous. Dependency detection is based on type references found in the parsed AST and is not a complete Java semantic/type-resolution engine.
-- **Supported declarations:** current class-level processing centres on JavaParser `ClassOrInterfaceDeclaration` nodes; enums and records are not yet represented by the same class-analysis flow.
-- **Risk score is heuristic.** It has not been statistically calibrated against real defect data and should be used as a prioritisation aid, not as proof that code is defective.
-- **Analysis scope:** the scanner recursively considers `.java` files under the selected directory. For meaningful results, select a source directory or project folder and avoid including irrelevant generated sources when possible.
-- **Test coverage:** the project should be validated with a broader suite of known-input test cases before relying on its metrics for production decisions.
-
-## Development roadmap
-
-Potential next improvements include:
-
-1. Add automated unit tests for complexity, nesting, LOC, code smells, dependency extraction, and risk scoring.
-2. Improve type resolution using fully qualified class names and package information.
-3. Refine metric conventions and document edge cases such as lambdas, switch expressions, constructors, records, and enums.
-4. Improve graph layout and handling of large projects.
-5. Add analysis reports and export options.
-6. Add configurable smell thresholds and risk-score weights.
-7. Improve error handling for malformed or unsupported source files.
+- **Separation of concerns:** scanning, parsing, metrics, smells, dependencies, risk scoring, git hotspot ranking, regression diffs, and presentation are separate components.
+- **Reusable result models:** method, class, and project results are represented as objects so the console, exporters, and GUI consume the same analysis output.
+- **Background analysis:** the JavaFX interface uses a background task with live stage progress callbacks.
+- **Transparent heuristics:** rules and score contributions are documented and customizable via Quality Gate presets.
+- **Robust error handling:** parse failures produce diagnostics and do not crash the analysis run.
 
 ## License
 
