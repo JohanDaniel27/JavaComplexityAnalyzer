@@ -7,6 +7,7 @@ import com.complexityanalyzer.smells.CodeSmell;
 import java.nio.file.Path;
 import java.util.List;
 
+/** Aggregates all analysis outputs for one class or interface. */
 public class ClassAnalysisResult {
 
     private final String className;
@@ -18,55 +19,25 @@ public class ClassAnalysisResult {
     private final int riskScore;
     private final String riskLevel;
 
-    public ClassAnalysisResult(
-            String className,
-            Path sourceFile,
-            ClassMetrics metrics,
-            DependencyResult dependency,
-            List<MethodAnalysisResult> methods,
-            List<CodeSmell> smells,
-            int riskScore,
-            String riskLevel) {
-
-        this.className = className;
+    public ClassAnalysisResult(String className, Path sourceFile, ClassMetrics metrics,
+                               DependencyResult dependency, List<MethodAnalysisResult> methods,
+                               List<CodeSmell> smells, int riskScore, String riskLevel) {
+        this.className  = className;
         this.sourceFile = sourceFile;
-        this.metrics = metrics;
+        this.metrics    = metrics;
         this.dependency = dependency;
-        this.methods = List.copyOf(methods);
-        this.smells = List.copyOf(smells);
-        this.riskScore = riskScore;
-        this.riskLevel = riskLevel;
+        this.methods    = List.copyOf(methods);
+        this.smells     = List.copyOf(smells);
+        this.riskScore  = riskScore;
+        this.riskLevel  = riskLevel;
     }
 
-    public String getClassName() {
-        return className;
-    }
-
-    public Path getSourceFile() {
-        return sourceFile;
-    }
-
-    public ClassMetrics getMetrics() {
-        return metrics;
-    }
-
-    public DependencyResult getDependency() {
-        return dependency;
-    }
-
-    public List<MethodAnalysisResult> getMethods() {
-        return methods;
-    }
-
-    public List<CodeSmell> getSmells() {
-        return smells;
-    }
-
-    public int getRiskScore() {
-        return riskScore;
-    }
-
-    public String getRiskLevel() {
-        return riskLevel;
-    }
+    public String getClassName()               { return className; }
+    public Path getSourceFile()                { return sourceFile; }
+    public ClassMetrics getMetrics()           { return metrics; }
+    public DependencyResult getDependency()    { return dependency; }
+    public List<MethodAnalysisResult> getMethods() { return methods; }
+    public List<CodeSmell> getSmells()         { return smells; }
+    public int getRiskScore()                  { return riskScore; }
+    public String getRiskLevel()               { return riskLevel; }
 }
