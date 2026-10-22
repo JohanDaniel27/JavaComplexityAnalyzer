@@ -22,6 +22,7 @@ import java.util.*;
 
 /**
  * Draws the class dependency graph with:
+ * - Modern dark node cards with risk-level borders
  * - Customizable zoom controls (slider, in/out buttons, fit to view, 100% actual size)
  * - Initial automatic fit-to-view so the entire graph and all connections are visible at first
  * - Circular-dependency edges highlighted in red
@@ -31,7 +32,7 @@ import java.util.*;
 public class DependencyGraphView {
 
     private static final double NODE_WIDTH  = 140;
-    private static final double NODE_HEIGHT = 50;
+    private static final double NODE_HEIGHT = 48;
 
     private static final double MIN_ZOOM = 0.05; // 5%
     private static final double MAX_ZOOM = 3.00; // 300%
@@ -39,9 +40,10 @@ public class DependencyGraphView {
     public Node create(List<ClassAnalysisResult> classes, List<DependencyCycle> cycles) {
         if (classes == null || classes.isEmpty()) {
             Label placeholder = new Label("No classes to display.");
-            placeholder.setStyle("-fx-text-fill: #888; -fx-font-size: 14px;");
+            placeholder.setStyle("-fx-text-fill: #6e7681; -fx-font-size: 14px;");
             VBox box = new VBox(placeholder);
             box.setAlignment(Pos.CENTER);
+            box.setStyle("-fx-background-color: #121317;");
             return box;
         }
 
@@ -73,7 +75,7 @@ public class DependencyGraphView {
         canvas.setPrefSize(width, height);
         canvas.setMinSize(width, height);
         canvas.setMaxSize(width, height);
-        canvas.setStyle("-fx-background-color: transparent;");
+        canvas.setStyle("-fx-background-color: #121317;");
 
         // 1. Draw dependency edges first (behind nodes)
         int connectionCount = 0;
@@ -101,20 +103,22 @@ public class DependencyGraphView {
             node.setMaxSize(NODE_WIDTH, NODE_HEIGHT);
 
             String borderColor = switch (clazz.getRiskLevel()) {
-                case "CRITICAL" -> "#e74c3c";
-                case "HIGH" -> "#e67e22";
-                case "MEDIUM" -> "#f39c12";
-                default -> "#5275A5";
+                case "CRITICAL" -> "#ef4444";
+                case "HIGH" -> "#f97316";
+                case "MEDIUM" -> "#f59e0b";
+                default -> "#3b82f6";
             };
 
             node.setStyle(
-                    "-fx-background-color: #E8F0FE;" +
+                    "-fx-background-color: #1a1b24;" +
                     "-fx-border-color: " + borderColor + ";" +
                     "-fx-border-width: 1.5;" +
-                    "-fx-border-radius: 8;" +
-                    "-fx-background-radius: 8;" +
-                    "-fx-font-weight: bold;" +
-                    "-fx-padding: 5;"
+                    "-fx-border-radius: 6;" +
+                    "-fx-background-radius: 6;" +
+                    "-fx-text-fill: #ffffff;" +
+                    "-fx-font-weight: 600;" +
+                    "-fx-font-size: 11px;" +
+                    "-fx-padding: 4;"
             );
             node.setLayoutX(pt[0] - NODE_WIDTH / 2);
             node.setLayoutY(pt[1] - NODE_HEIGHT / 2);
@@ -139,22 +143,22 @@ public class DependencyGraphView {
         Group zoomGroup = new Group(canvas);
         StackPane centeredContainer = new StackPane(zoomGroup);
         centeredContainer.setAlignment(Pos.CENTER);
-        centeredContainer.setStyle("-fx-background-color: #f8f9fb;");
+        centeredContainer.setStyle("-fx-background-color: #121317;");
 
         ScrollPane scrollPane = new ScrollPane(centeredContainer);
         scrollPane.setPannable(true);
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(true);
-        scrollPane.setStyle("-fx-background-color: #f8f9fb;");
+        scrollPane.setStyle("-fx-background-color: #121317;");
 
         // 4. Zoom UI Controls
         Slider zoomSlider = new Slider(MIN_ZOOM, MAX_ZOOM, 1.0);
-        zoomSlider.setPrefWidth(160);
+        zoomSlider.setPrefWidth(140);
         zoomSlider.setBlockIncrement(0.05);
 
         Label zoomPercentLabel = new Label("100%");
-        zoomPercentLabel.setMinWidth(48);
-        zoomPercentLabel.setStyle("-fx-font-family: monospace; -fx-font-weight: bold;");
+        zoomPercentLabel.setMinWidth(44);
+        zoomPercentLabel.setStyle("-fx-font-family: monospace; -fx-font-weight: 600; -fx-text-fill: #e6edf3;");
 
         Button zoomOutBtn = new Button("−");
         zoomOutBtn.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-min-width: 28px;");
@@ -163,7 +167,7 @@ public class DependencyGraphView {
         zoomInBtn.setStyle("-fx-font-size: 13px; -fx-font-weight: bold; -fx-min-width: 28px;");
 
         Button fitBtn = new Button("Fit to View");
-        fitBtn.setStyle("-fx-font-weight: bold;");
+        fitBtn.setStyle("-fx-font-weight: 600;");
 
         Button actualSizeBtn = new Button("100%");
 
@@ -210,16 +214,13 @@ public class DependencyGraphView {
             }
         });
 
-        // 5. Initial Full Zoom-Out:
-        // Set an estimated fit immediately so it is already zoomed out before layout
+        // 5. Initial Full Zoom-Out
         double estimatedVw = 1050;
         double estimatedVh = 600;
         double estScale = Math.min((estimatedVw - 40) / width, (estimatedVh - 40) / height);
         estScale = Math.max(MIN_ZOOM, Math.min(estScale, 1.0));
         zoomSlider.setValue(estScale);
 
-        // When the ScrollPane viewport bounds become known (e.g., when the tab is rendered),
-        // automatically perform exact fit-to-view so ALL connections and nodes are fully visible!
         final boolean[] initialFitDone = {false};
         scrollPane.viewportBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
             if (!initialFitDone[0] && newBounds.getWidth() > 50 && newBounds.getHeight() > 50) {
@@ -230,42 +231,43 @@ public class DependencyGraphView {
 
         // 6. Build Toolbar and Container
         Label zoomLabel = new Label("Zoom:");
-        zoomLabel.setStyle("-fx-font-weight: bold;");
+        zoomLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: #8b949e;");
 
-        Label tipLabel = new Label("💡 Tip: Ctrl + Mouse Wheel to zoom | Click and drag to pan");
-        tipLabel.setStyle("-fx-text-fill: #777; -fx-font-size: 11px;");
+        Label tipLabel = new Label("Tip: Ctrl + Mouse Wheel to zoom | Drag to pan");
+        tipLabel.setStyle("-fx-text-fill: #6e7681; -fx-font-size: 11px;");
         HBox.setHgrow(tipLabel, Priority.ALWAYS);
         tipLabel.setAlignment(Pos.CENTER_RIGHT);
 
         HBox toolbar = new HBox(8, zoomLabel, zoomOutBtn, zoomSlider, zoomPercentLabel, zoomInBtn,
                 fitBtn, actualSizeBtn, new Separator(javafx.geometry.Orientation.VERTICAL), tipLabel);
         toolbar.setAlignment(Pos.CENTER_LEFT);
-        toolbar.setPadding(new Insets(8, 12, 8, 12));
-        toolbar.setStyle("-fx-background-color: #ffffff; -fx-border-color: #e2e8f0; -fx-border-width: 0 0 1 0;");
+        toolbar.setPadding(new Insets(8, 14, 8, 14));
+        toolbar.setStyle("-fx-background-color: #16171e; -fx-border-color: #262833; -fx-border-width: 0 0 1 0;");
 
         // Bottom status / legend
         Label legend = new Label(String.format(
-                "Classes: %d  |  Connections: %d  |  Cycles: %d   •   Red arrows = Circular dependency   •   Grey arrows = Normal dependency",
+                "Classes: %d  |  Connections: %d  |  Cycles: %d   •   Red arrows = Circular dependency   •   Muted arrows = Normal dependency",
                 count, connectionCount, (cycles == null ? 0 : cycles.size())));
-        legend.setStyle("-fx-font-size: 11px; -fx-text-fill: #555;");
+        legend.setStyle("-fx-font-size: 11px; -fx-text-fill: #8b949e;");
 
         BorderPane container = new BorderPane();
         container.setTop(toolbar);
         container.setCenter(scrollPane);
         container.setBottom(legend);
-        BorderPane.setMargin(legend, new Insets(6, 12, 6, 12));
+        container.setStyle("-fx-background-color: #121317;");
+        BorderPane.setMargin(legend, new Insets(8, 14, 8, 14));
 
         // Keyboard shortcuts (+ / - / 0)
         container.setOnKeyPressed(event -> {
             if (event.isControlDown()) {
-                if (event.getCode() == KeyCode.PLUS || event.getCode() == KeyCode.EQUALS || event.getCode() == KeyCode.ADD) {
-                    zoomSlider.setValue(Math.min(MAX_ZOOM, zoomSlider.getValue() * 1.15));
+                if (event.getCode() == KeyCode.PLUS || event.getCode() == KeyCode.EQUALS) {
+                    zoomInBtn.fire();
                     event.consume();
-                } else if (event.getCode() == KeyCode.MINUS || event.getCode() == KeyCode.SUBTRACT) {
-                    zoomSlider.setValue(Math.max(MIN_ZOOM, zoomSlider.getValue() * 0.85));
+                } else if (event.getCode() == KeyCode.MINUS) {
+                    zoomOutBtn.fire();
                     event.consume();
                 } else if (event.getCode() == KeyCode.DIGIT0 || event.getCode() == KeyCode.NUMPAD0) {
-                    fitToView(scrollPane, zoomSlider, finalWidth, finalHeight);
+                    actualSizeBtn.fire();
                     event.consume();
                 }
             }
@@ -277,10 +279,10 @@ public class DependencyGraphView {
     private void fitToView(ScrollPane scrollPane, Slider zoomSlider, double canvasWidth, double canvasHeight) {
         double vw = scrollPane.getViewportBounds().getWidth();
         double vh = scrollPane.getViewportBounds().getHeight();
+
         if (vw <= 50) vw = 1050;
         if (vh <= 50) vh = 600;
 
-        // Leave a 40px margin around canvas bounds so all outer nodes and labels are comfortably within view
         double margin = 40.0;
         double scaleX = (vw - margin) / canvasWidth;
         double scaleY = (vh - margin) / canvasHeight;
@@ -310,10 +312,10 @@ public class DependencyGraphView {
         double endX   = x2 - ux * (NODE_WIDTH / 2 + 6);
         double endY   = y2 - uy * (NODE_HEIGHT / 2 + 6);
 
-        Color lineColor = isCycle ? Color.web("#e74c3c") : Color.web("#9e9e9e");
+        Color lineColor = isCycle ? Color.web("#ef4444") : Color.web("#475569");
         Line line = new Line(startX, startY, endX, endY);
         line.setStroke(lineColor);
-        line.setStrokeWidth(isCycle ? 2.0 : 1.2);
+        line.setStrokeWidth(isCycle ? 2.2 : 1.2);
 
         // Arrow head
         double angle = Math.atan2(endY - startY, endX - startX);

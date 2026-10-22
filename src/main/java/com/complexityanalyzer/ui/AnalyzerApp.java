@@ -47,8 +47,8 @@ public class AnalyzerApp extends Application {
 
     // ---- Controls ----
     private final Label folderLabel   = new Label("No folder selected");
-    private final Label summaryLabel  = new Label("No analysis yet");
-    private final Label statusLabel   = new Label("Choose a Java project folder");
+    private final Label summaryLabel  = new Label("Ready to analyze");
+    private final Label statusLabel   = new Label("Select a Java project directory to begin");
     private final ProgressBar progressBar = new ProgressBar(0);
     private final Label progressLabel = new Label("");
     private final Button chooseButton  = new Button("Choose Folder");
@@ -78,54 +78,81 @@ public class AnalyzerApp extends Application {
     @Override
     public void start(Stage stage) {
 
-        // Header
-        Label title    = new Label("Java Complexity Analyzer");
-        Label subtitle = new Label("Analyze complexity, smells, dependencies, and maintenance risk.");
-        title.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
-        subtitle.setStyle("-fx-text-fill: #555;");
+        // Header Labels
+        Label title = new Label("Java Complexity Analyzer");
+        title.getStyleClass().add("app-title");
+
+        Label subtitle = new Label("Static AST metrics, architectural dependencies, code smells, and maintenance risk");
+        subtitle.getStyleClass().add("app-subtitle");
 
         folderLabel.setWrapText(true);
+        folderLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-family: monospace; -fx-font-size: 12px;");
         HBox.setHgrow(folderLabel, Priority.ALWAYS);
 
-        analyzeButton.setDisable(true);
+        chooseButton.getStyleClass().add("button");
         chooseButton.setOnAction(e -> chooseFolder(stage));
+
+        analyzeButton.getStyleClass().addAll("button", "button-primary");
+        analyzeButton.setDisable(true);
         analyzeButton.setOnAction(e -> analyzeProject());
 
-        HBox controls = new HBox(10, chooseButton, folderLabel, analyzeButton);
+        HBox controls = new HBox(12, chooseButton, folderLabel, analyzeButton);
         controls.setAlignment(Pos.CENTER_LEFT);
 
-        progressBar.setPrefWidth(400);
+        progressBar.setPrefWidth(350);
         progressBar.setVisible(false);
         progressBar.setManaged(false);
-        progressLabel.setStyle("-fx-text-fill: #555; -fx-font-size: 12px;");
+        progressLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 11px;");
+
         HBox progressRow = new HBox(10, progressBar, progressLabel);
         progressRow.setAlignment(Pos.CENTER_LEFT);
 
-        summaryLabel.setStyle("-fx-font-size: 13px; -fx-font-weight: bold;");
-        statusLabel.setStyle("-fx-text-fill: #777; -fx-font-size: 12px;");
-
-        VBox top = new VBox(8, title, subtitle, controls, progressRow, summaryLabel, statusLabel);
-        top.setPadding(new Insets(16));
+        VBox top = new VBox(10, title, subtitle, controls, progressRow);
+        top.getStyleClass().add("app-header");
 
         // Build tabs
-        overviewTab    = makeTab("Overview", new Label("Run analysis to view dashboard."));
+        overviewTab    = makeTab("Overview", buildEmptyPlaceholder("Select a project and click 'Analyze Project' to view dashboard metrics."));
         classesTab     = makeTab("Classes", buildClassesPane());
-        dependencyTab  = makeTab("Dependencies", new Label("Run analysis to view graph."));
-        hotspotsTab    = makeTab("Hotspots", new Label("Run analysis to view hotspots."));
+        dependencyTab  = makeTab("Dependencies", buildEmptyPlaceholder("Run analysis to view interactive class dependency graph."));
+        hotspotsTab    = makeTab("Hotspots", buildEmptyPlaceholder("Run analysis to view Git churn and maintenance hotspots."));
         qualityTab     = makeTab("Quality & Snapshots", buildQualityPane());
-        diagnosticsTab = makeTab("Diagnostics", new Label("Run analysis to view diagnostics."));
+        diagnosticsTab = makeTab("Diagnostics", buildEmptyPlaceholder("Run analysis to view parser diagnostics."));
 
         tabs.getTabs().addAll(overviewTab, classesTab, dependencyTab,
                 hotspotsTab, qualityTab, diagnosticsTab);
 
+        // Summary bar at bottom
+        summaryLabel.setStyle("-fx-font-size: 12px; -fx-font-weight: 600; -fx-text-fill: #e6edf3;");
+        statusLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-size: 12px;");
+        HBox.setHgrow(summaryLabel, Priority.ALWAYS);
+
+        HBox bottomBar = new HBox(16, summaryLabel, statusLabel);
+        bottomBar.setAlignment(Pos.CENTER_LEFT);
+        bottomBar.getStyleClass().add("summary-bar");
+
         BorderPane root = new BorderPane();
         root.setTop(top);
         root.setCenter(tabs);
-        root.setStyle("-fx-font-family: 'Segoe UI'; -fx-background-color: #f4f6fa;");
+        root.setBottom(bottomBar);
+
+        Scene scene = new Scene(root, 1260, 800);
+        var cssUrl = getClass().getResource("/styles/dark-theme.css");
+        if (cssUrl != null) {
+            scene.getStylesheets().add(cssUrl.toExternalForm());
+        }
 
         stage.setTitle("Java Complexity Analyzer");
-        stage.setScene(new Scene(root, 1200, 750));
+        stage.setScene(scene);
         stage.show();
+    }
+
+    private javafx.scene.Node buildEmptyPlaceholder(String message) {
+        Label label = new Label(message);
+        label.setStyle("-fx-text-fill: #6e7681; -fx-font-size: 14px;");
+        VBox box = new VBox(label);
+        box.setAlignment(Pos.CENTER);
+        box.setStyle("-fx-background-color: #121317;");
+        return box;
     }
 
     // ------------------------------------------------------------------ //
@@ -141,8 +168,8 @@ public class AnalyzerApp extends Application {
     private javafx.scene.Node buildClassesPane() {
 
         // Filter bar
-        searchField.setPromptText("Search class or method…");
-        searchField.setPrefWidth(220);
+        searchField.setPromptText("Filter class name…");
+        searchField.setPrefWidth(240);
         searchField.textProperty().addListener((obs, o, n) -> applyFilters());
 
         riskFilter.getItems().addAll("All", "CRITICAL", "HIGH", "MEDIUM", "LOW");
@@ -153,11 +180,17 @@ public class AnalyzerApp extends Application {
         smellFilter.setValue("All");
         smellFilter.setOnAction(e -> applyFilters());
 
-        HBox filterBar = new HBox(10, new Label("Search:"), searchField,
-                new Label("Risk:"), riskFilter,
-                new Label("Smells:"), smellFilter);
+        Label searchLabel = new Label("Search:");
+        searchLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-weight: 500;");
+        Label riskLabel = new Label("Risk Level:");
+        riskLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-weight: 500;");
+        Label smellLabel = new Label("Smell Status:");
+        smellLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-weight: 500;");
+
+        HBox filterBar = new HBox(12, searchLabel, searchField, riskLabel, riskFilter, smellLabel, smellFilter);
         filterBar.setAlignment(Pos.CENTER_LEFT);
-        filterBar.setPadding(new Insets(8, 8, 4, 8));
+        filterBar.setPadding(new Insets(10, 14, 10, 14));
+        filterBar.setStyle("-fx-background-color: #16171e; -fx-border-color: #262833; -fx-border-width: 0 0 1 0;");
 
         // Class table columns
         TableColumn<ClassAnalysisResult, String> nameCol = new TableColumn<>("Class");
@@ -184,11 +217,36 @@ public class AnalyzerApp extends Application {
         TableColumn<ClassAnalysisResult, Integer> coupCol = new TableColumn<>("Coupling");
         coupCol.setCellValueFactory(d -> new ReadOnlyObjectWrapper<>(d.getValue().getDependency().getCoupling()));
 
-        TableColumn<ClassAnalysisResult, Integer> riskCol = new TableColumn<>("Risk");
+        TableColumn<ClassAnalysisResult, Integer> riskCol = new TableColumn<>("Risk Score");
         riskCol.setCellValueFactory(d -> new ReadOnlyObjectWrapper<>(d.getValue().getRiskScore()));
 
-        TableColumn<ClassAnalysisResult, String> levelCol = new TableColumn<>("Level");
+        TableColumn<ClassAnalysisResult, String> levelCol = new TableColumn<>("Risk Tier");
         levelCol.setCellValueFactory(d -> new ReadOnlyStringWrapper(d.getValue().getRiskLevel()));
+        levelCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String level, boolean empty) {
+                super.updateItem(level, empty);
+                if (empty || level == null) {
+                    setGraphic(null);
+                    setText(null);
+                } else {
+                    Label badge = new Label(level);
+                    String color = switch (level) {
+                        case "CRITICAL" -> "#ef4444";
+                        case "HIGH" -> "#f97316";
+                        case "MEDIUM" -> "#f59e0b";
+                        default -> "#10b981";
+                    };
+                    badge.setStyle(String.format(
+                            "-fx-background-color: %s22; -fx-text-fill: %s; -fx-border-color: %s; " +
+                            "-fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 2 8; -fx-font-size: 10px; -fx-font-weight: bold;",
+                            color, color, color));
+                    setGraphic(badge);
+                    setText(null);
+                    setAlignment(Pos.CENTER);
+                }
+            }
+        });
 
         classTable.getColumns().addAll(nameCol, locCol, nclocCol, methodsCol, ccCol, cogCol, lcom4Col, coupCol, riskCol, levelCol);
         classTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
@@ -198,18 +256,19 @@ public class AnalyzerApp extends Application {
         // Right side: tab between text detail and code viewer
         detailsArea.setEditable(false);
         detailsArea.setWrapText(false);
-        detailsArea.setStyle("-fx-font-family: monospace; -fx-font-size: 12px;");
-        detailsArea.setPromptText("Select a class to view details.");
+        detailsArea.setPromptText("Select a class from the table to view metrics and detected smells.");
 
         TabPane detailTabs = new TabPane();
-        Tab metricsDetailTab = makeTab("Metrics", detailsArea);
-        Tab codeTab = makeTab("Source", codeViewer.getNode());
+        Tab metricsDetailTab = makeTab("Metrics & Smells", detailsArea);
+        Tab codeTab = makeTab("Source View", codeViewer.getNode());
         detailTabs.getTabs().addAll(metricsDetailTab, codeTab);
 
         SplitPane split = new SplitPane(classTable, detailTabs);
         split.setDividerPositions(0.50);
+        split.setStyle("-fx-background-color: #121317;");
 
         VBox classesPane = new VBox(filterBar, split);
+        classesPane.setStyle("-fx-background-color: #121317;");
         VBox.setVgrow(split, Priority.ALWAYS);
         return classesPane;
     }
@@ -218,22 +277,21 @@ public class AnalyzerApp extends Application {
         Button saveBtn    = new Button("Save Baseline Snapshot");
         Button compareBtn = new Button("Compare with Baseline");
         Button exportBtn  = new Button("Export Report…");
+        exportBtn.getStyleClass().add("button-primary");
 
-        Label qgLabel = new Label("Quality Gate: Not yet evaluated");
-        qgLabel.setStyle("-fx-font-weight: bold;");
+        Label qgLabel = new Label("Quality Gate: Not evaluated yet");
+        qgLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px; -fx-text-fill: #e6edf3;");
 
         TextArea qgDetails = new TextArea();
         qgDetails.setEditable(false);
         qgDetails.setWrapText(true);
-        qgDetails.setStyle("-fx-font-family: monospace; -fx-font-size: 12px;");
-        qgDetails.setPrefHeight(300);
+        qgDetails.setPrefHeight(260);
 
         TextArea diffArea = new TextArea();
         diffArea.setEditable(false);
         diffArea.setWrapText(true);
-        diffArea.setStyle("-fx-font-family: monospace; -fx-font-size: 12px;");
-        diffArea.setPrefHeight(200);
-        diffArea.setPromptText("Regression diff will appear here after comparison.");
+        diffArea.setPrefHeight(220);
+        diffArea.setPromptText("Regression diff will appear here after comparison with a baseline snapshot.");
 
         ComboBox<String> presetBox = new ComboBox<>();
         presetBox.getItems().addAll("Standard", "Strict", "Permissive");
@@ -265,14 +323,14 @@ public class AnalyzerApp extends Application {
             if (lastResult == null) return;
             try {
                 if (!snapshotManager.hasSnapshot(lastResult.getProjectPath())) {
-                    diffArea.setText("No baseline snapshot found. Run 'Save Baseline Snapshot' first.");
+                    diffArea.setText("No baseline snapshot found. Click 'Save Baseline Snapshot' first.");
                     return;
                 }
                 ProjectSnapshot baseline = snapshotManager.load(lastResult.getProjectPath());
                 SnapshotComparator comparator = new SnapshotComparator();
                 RegressionDiffResult diff = comparator.compare(baseline, lastResult);
                 StringBuilder sb = new StringBuilder();
-                sb.append("=== Regression Diff ===").append("\n");
+                sb.append("=== REGRESSION DIFF ===").append("\n");
                 sb.append("Added classes: ").append(diff.getAddedClasses().size()).append("\n");
                 sb.append("Removed classes: ").append(diff.getRemovedClasses().size()).append("\n");
                 sb.append("Changed classes: ").append(diff.getChangedClasses().size()).append("\n");
@@ -293,16 +351,21 @@ public class AnalyzerApp extends Application {
 
         exportBtn.setOnAction(e -> showExportDialog());
 
-        HBox toolbar = new HBox(10, new Label("Quality Gate Preset:"), presetBox,
-                saveBtn, compareBtn, exportBtn);
+        Label presetLabel = new Label("Quality Gate Preset:");
+        presetLabel.setStyle("-fx-text-fill: #8b949e; -fx-font-weight: 500;");
+
+        HBox toolbar = new HBox(12, presetLabel, presetBox, saveBtn, compareBtn, exportBtn);
         toolbar.setAlignment(Pos.CENTER_LEFT);
-        toolbar.setPadding(new Insets(8));
+        toolbar.setPadding(new Insets(10, 14, 10, 14));
+        toolbar.setStyle("-fx-background-color: #16171e; -fx-border-color: #262833; -fx-border-width: 0 0 1 0;");
 
-        VBox pane = new VBox(10, toolbar, qgLabel, qgDetails,
-                new Separator(), new Label("Regression Diff:"), diffArea);
-        pane.setPadding(new Insets(12));
+        Label regrLabel = new Label("Regression Diff:");
+        regrLabel.setStyle("-fx-font-weight: 600; -fx-text-fill: #e6edf3;");
 
-        // Store references for later updates
+        VBox pane = new VBox(12, toolbar, qgLabel, qgDetails, new Separator(), regrLabel, diffArea);
+        pane.setPadding(new Insets(16));
+        pane.setStyle("-fx-background-color: #121317;");
+
         pane.setUserData(new Object[]{qgLabel, qgDetails});
         return pane;
     }
@@ -319,7 +382,7 @@ public class AnalyzerApp extends Application {
             selectedPath = folder.toPath();
             folderLabel.setText(selectedPath.toAbsolutePath().toString());
             analyzeButton.setDisable(false);
-            statusLabel.setText("Ready to analyze.");
+            statusLabel.setText("Directory selected. Click 'Analyze Project' to run.");
         }
     }
 
@@ -328,7 +391,7 @@ public class AnalyzerApp extends Application {
         Path projectPath = selectedPath;
 
         setBusy(true);
-        statusLabel.setText("Analyzing project…");
+        statusLabel.setText("Analyzing source tree…");
         progressBar.setProgress(0);
 
         ProjectAnalyzer analyzer = new ProjectAnalyzer();
@@ -372,10 +435,10 @@ public class AnalyzerApp extends Application {
             }
 
             updateSummary(lastResult);
-            statusLabel.setText("Analysis complete. Classes: " + lastResult.getClasses().size()
+            statusLabel.setText("Completed. Classes: " + lastResult.getClasses().size()
                     + "  |  Cycles: " + lastResult.getCycles().size()
                     + "  |  Diagnostics: " + lastResult.getDiagnostics().size());
-            progressLabel.setText("Done");
+            progressLabel.setText("Ready");
             progressBar.setProgress(1.0);
             setBusy(false);
 
@@ -407,10 +470,12 @@ public class AnalyzerApp extends Application {
 
     private javafx.scene.Node buildHotspotsPane(ProjectAnalysisResult result) {
         if (result.getHotspots().isEmpty()) {
-            Label lbl = new Label("No hotspot data (project may not be a Git repository or has no commit history).");
-            lbl.setStyle("-fx-text-fill: #888;");
+            Label lbl = new Label("No hotspot data (target folder is not a Git repository or has no commit history).");
+            lbl.setStyle("-fx-text-fill: #6e7681; -fx-font-size: 13px;");
             VBox b = new VBox(lbl);
-            b.setPadding(new Insets(16));
+            b.setAlignment(Pos.CENTER);
+            b.setPadding(new Insets(24));
+            b.setStyle("-fx-background-color: #121317;");
             return b;
         }
 
@@ -421,6 +486,31 @@ public class AnalyzerApp extends Application {
 
         TableColumn<com.complexityanalyzer.git.HotspotResult, String> tierCol = new TableColumn<>("Tier");
         tierCol.setCellValueFactory(d -> new ReadOnlyStringWrapper(d.getValue().getTier().toString()));
+        tierCol.setCellFactory(col -> new TableCell<>() {
+            @Override
+            protected void updateItem(String tier, boolean empty) {
+                super.updateItem(tier, empty);
+                if (empty || tier == null) {
+                    setGraphic(null);
+                    setText(null);
+                } else {
+                    Label badge = new Label(tier);
+                    String color = switch (tier) {
+                        case "CRITICAL_HOTSPOT" -> "#ef4444";
+                        case "HIGH_HOTSPOT" -> "#f97316";
+                        case "MODERATE" -> "#f59e0b";
+                        default -> "#10b981";
+                    };
+                    badge.setStyle(String.format(
+                            "-fx-background-color: %s22; -fx-text-fill: %s; -fx-border-color: %s; " +
+                            "-fx-border-radius: 10; -fx-background-radius: 10; -fx-padding: 2 8; -fx-font-size: 10px; -fx-font-weight: bold;",
+                            color, color, color));
+                    setGraphic(badge);
+                    setText(null);
+                    setAlignment(Pos.CENTER);
+                }
+            }
+        });
 
         TableColumn<com.complexityanalyzer.git.HotspotResult, Number> scoreCol = new TableColumn<>("Score");
         scoreCol.setCellValueFactory(d -> new ReadOnlyObjectWrapper<>(d.getValue().getHotspotScore()));
@@ -444,10 +534,12 @@ public class AnalyzerApp extends Application {
         hotTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         hotTable.getItems().setAll(result.getHotspots());
 
-        Label title = new Label("Maintenance Hotspots (ranked by combined churn × complexity)");
-        title.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
-        VBox box = new VBox(8, title, hotTable);
-        box.setPadding(new Insets(12));
+        Label title = new Label("Maintenance Hotspots (Ranked by Churn × Structural Complexity)");
+        title.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #e6edf3;");
+
+        VBox box = new VBox(10, title, hotTable);
+        box.setPadding(new Insets(16));
+        box.setStyle("-fx-background-color: #121317;");
         VBox.setVgrow(hotTable, Priority.ALWAYS);
         return box;
     }
@@ -455,16 +547,20 @@ public class AnalyzerApp extends Application {
     private javafx.scene.Node buildDiagnosticsPane(ProjectAnalysisResult result) {
         TextArea area = new TextArea();
         area.setEditable(false);
-        area.setStyle("-fx-font-family: monospace; -fx-font-size: 12px;");
         if (result.getDiagnostics().isEmpty()) {
-            area.setText("No diagnostics. All files parsed successfully.");
+            area.setText("No diagnostics. All source files parsed successfully without errors or warnings.");
         } else {
             StringBuilder sb = new StringBuilder();
             result.getDiagnostics().forEach(d -> sb.append(d).append("\n"));
             area.setText(sb.toString());
         }
-        VBox box = new VBox(new Label("Parse diagnostics and skipped files:"), area);
-        box.setPadding(new Insets(12));
+
+        Label label = new Label("Parser Diagnostics & Skipped Constructs:");
+        label.setStyle("-fx-font-weight: 600; -fx-font-size: 13px; -fx-text-fill: #e6edf3;");
+
+        VBox box = new VBox(10, label, area);
+        box.setPadding(new Insets(16));
+        box.setStyle("-fx-background-color: #121317;");
         VBox.setVgrow(area, Priority.ALWAYS);
         return box;
     }
@@ -472,15 +568,15 @@ public class AnalyzerApp extends Application {
     private void updateQualityGateDisplay(Label qgLabel, TextArea qgDetails) {
         if (lastGateResult == null) return;
         if (lastGateResult.isPassed()) {
-            qgLabel.setText("✅ Quality Gate: PASSED");
-            qgLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #27ae60;");
-            qgDetails.setText("All quality rules passed.");
+            qgLabel.setText("[PASSED] Quality Gate - All criteria satisfied");
+            qgLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #10b981; -fx-font-size: 14px;");
+            qgDetails.setText("All defined quality gate conditions passed successfully.");
         } else {
-            qgLabel.setText("❌ Quality Gate: FAILED  (" + lastGateResult.getViolationCount() + " violations)");
-            qgLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #e74c3c;");
+            qgLabel.setText("[FAILED] Quality Gate (" + lastGateResult.getViolationCount() + " violations)");
+            qgLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #ef4444; -fx-font-size: 14px;");
             StringBuilder sb = new StringBuilder();
             lastGateResult.getViolations().forEach(v ->
-                    sb.append(v).append("\n"));
+                    sb.append("• ").append(v).append("\n"));
             qgDetails.setText(sb.toString());
         }
     }
@@ -501,38 +597,38 @@ public class AnalyzerApp extends Application {
         StringBuilder out = new StringBuilder();
         var m = result.getMetrics();
         out.append("CLASS: ").append(result.getClassName()).append("\n");
-        out.append("File: ").append(result.getSourceFile()).append("\n");
-        out.append("Risk: ").append(result.getRiskLevel())
+        out.append("File:  ").append(result.getSourceFile()).append("\n");
+        out.append("Risk:  ").append(result.getRiskLevel())
                 .append(" (").append(result.getRiskScore()).append("/100)\n\n");
 
-        out.append("── CLASS METRICS ──────────────────────────\n");
-        out.append(String.format("  LOC:                   %d%n", m.getLinesOfCode()));
-        out.append(String.format("  NCLOC:                 %d%n", m.getNcloc()));
-        out.append(String.format("  CLOC:                  %d%n", m.getCloc()));
+        out.append("── CLASS METRICS ──────────────────────────────────────────\n");
+        out.append(String.format("  Lines of Code (LOC):   %d%n", m.getLinesOfCode()));
+        out.append(String.format("  NCLOC (Non-Comment):   %d%n", m.getNcloc()));
+        out.append(String.format("  CLOC (Comments):       %d%n", m.getCloc()));
         out.append(String.format("  Blank Lines:           %d%n", m.getBlankLines()));
-        out.append(String.format("  Methods:               %d%n", m.getMethodCount()));
-        out.append(String.format("  Fields:                %d%n", m.getFieldCount()));
+        out.append(String.format("  Method Count:          %d%n", m.getMethodCount()));
+        out.append(String.format("  Field Count:           %d%n", m.getFieldCount()));
         out.append(String.format("  Total Cyclomatic CC:   %d%n", m.getTotalComplexity()));
         out.append(String.format("  Avg Cyclomatic CC:     %.1f%n", m.getAverageComplexity()));
         out.append(String.format("  Total Cognitive CC:    %d%n", m.getTotalCognitiveComplexity()));
         out.append(String.format("  Max Nesting Depth:     %d%n", m.getMaxNestingDepth()));
-        out.append(String.format("  WMC:                   %d%n", m.getWmc()));
-        out.append(String.format("  RFC:                   %d%n", m.getRfc()));
-        out.append(String.format("  LCOM4:                 %d%n", m.getLcom4()));
-        out.append(String.format("  Coupling (efferent):   %d%n", result.getDependency().getCoupling()));
-        out.append(String.format("  Afferent Coupling:     %d%n", result.getDependency().getAfferentCoupling()));
-        out.append(String.format("  Dependencies: %s%n", result.getDependency().getDependencies()));
+        out.append(String.format("  Weighted Methods (WMC):%d%n", m.getWmc()));
+        out.append(String.format("  Response for Class(RFC):%d%n", m.getRfc()));
+        out.append(String.format("  Lack of Cohesion(LCOM4):%d%n", m.getLcom4()));
+        out.append(String.format("  Efferent Coupling (Ce):%d%n", result.getDependency().getCoupling()));
+        out.append(String.format("  Afferent Coupling (Ca):%d%n", result.getDependency().getAfferentCoupling()));
+        out.append(String.format("  Direct Dependencies:   %s%n", result.getDependency().getDependencies()));
 
-        appendSmells(out, "\n── CLASS CODE SMELLS ─────────────────────", result.getSmells());
+        appendSmells(out, "\n── CLASS CODE SMELLS ─────────────────────────────────────", result.getSmells());
 
-        out.append("\n── METHOD DETAILS ──────────────────────────\n");
+        out.append("\n── METHOD DETAILS ─────────────────────────────────────────\n");
         for (MethodAnalysisResult method : result.getMethods()) {
             var mm = method.getMetrics();
-            out.append(String.format("%n  %s  [line %d–%d]%n",
+            out.append(String.format("%n  %s  [Lines %d–%d]%n",
                     mm.getMethodName(), mm.getStartLine(), mm.getEndLine()));
-            out.append(String.format("    LOC: %d  NCLOC: %d  Params: %d  Stmts: %d%n",
+            out.append(String.format("    LOC: %d  |  NCLOC: %d  |  Params: %d  |  Stmts: %d%n",
                     mm.getLinesOfCode(), mm.getNcloc(), mm.getParameterCount(), mm.getStatementCount()));
-            out.append(String.format("    Cyclomatic: %d  Cognitive: %d  Nesting: %d%n",
+            out.append(String.format("    Cyclomatic: %d  |  Cognitive: %d  |  Nesting Depth: %d%n",
                     mm.getComplexity(), mm.getCognitiveComplexity(), mm.getNestingDepth()));
             appendSmells(out, "    Smells", method.getSmells());
         }
@@ -543,17 +639,17 @@ public class AnalyzerApp extends Application {
     private void appendSmells(StringBuilder out, String heading, List<CodeSmell> smells) {
         out.append(heading).append(":\n");
         if (smells.isEmpty()) {
-            out.append("  None\n");
+            out.append("  None detected\n");
             return;
         }
         for (CodeSmell smell : smells) {
             out.append(String.format("  - [%s] %s: %s%n",
                     smell.getSeverity(), smell.getType(), smell.getMessage()));
             if (smell.getAdvice() != null) {
-                out.append(String.format("    💡 %s%n", smell.getAdvice().getGuidance()));
+                out.append(String.format("    Advice: %s%n", smell.getAdvice().getGuidance()));
             }
             if (smell.getLocation() != null) {
-                out.append(String.format("    📍 %s%n", smell.getLocation()));
+                out.append(String.format("    Location: %s%n", smell.getLocation()));
             }
         }
     }
@@ -573,7 +669,7 @@ public class AnalyzerApp extends Application {
                 .filter(c -> c.getRiskLevel().equals("HIGH") || c.getRiskLevel().equals("CRITICAL"))
                 .count();
         summaryLabel.setText(String.format(
-                "Classes: %d   Methods: %d   Smells: %d   High/Critical Risk: %d   Cycles: %d   Clones: %d",
+                "Classes: %d   |   Methods: %d   |   Smells: %d   |   High/Critical Risk: %d   |   Cycles: %d   |   Clones: %d",
                 result.getClasses().size(), methods, smells, risky,
                 result.getCycles().size(), result.getClones().size()));
     }
@@ -659,7 +755,7 @@ public class AnalyzerApp extends Application {
         analyzeButton.setDisable(busy || selectedPath == null);
         progressBar.setVisible(busy);
         progressBar.setManaged(busy);
-        progressLabel.setVisible(busy || !busy); // always visible
+        progressLabel.setVisible(true);
     }
 
     public static void main(String[] args) { launch(args); }
