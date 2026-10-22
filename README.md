@@ -107,6 +107,16 @@ The desktop interface provides six tabs:
 5. **Quality & Snapshots:** Quality Gate evaluation, preset selector, baseline snapshot saving, regression comparison, and multi-format report exporter.
 6. **Diagnostics:** Reports any parsing warnings or syntax problems encountered in partially analyzable projects.
 
+### Modern Dark UI & Visual Design
+
+The application features a modern, developer-first dark theme inspired by modern IDEs and telemetry dashboards:
+
+- **Glassmorphism & Elevation:** Deep dark canvas (`#0d1117`), elevated card panels (`#161b22`), sleek borders (`#30363d`), and rounded containers.
+- **KPI Stat Cards:** Prominent metric cards with vivid top-accent borders, glowing count badges, and clear descriptive indicators.
+- **Dark-Themed Charting:** Harmonious color palette for charts (Risk distribution, Top Cyclomatic & Cognitive Complexity) with styled plot backgrounds, clean legends, and high-contrast bars.
+- **Interactive Source Viewer (`CodeViewerPane`):** Monospace source display with line numbers gutter and glowing visual line-range highlights pinpointing code smell locations.
+- **Dependency Canvas (`DependencyGraphView`):** Interactive canvas with dark background, smooth node rendering, directional dependency curves, circular cycle highlights in crimson, and zoom/pan controls.
+
 ## Technology stack
 
 | Technology | Purpose |
@@ -115,6 +125,7 @@ The desktop interface provides six tabs:
 | Maven | Build and dependency management |
 | JavaParser Core 3.28.2 | Java source parsing and AST traversal |
 | JavaFX Controls 25.0.4 | Desktop interface, tables, controls, and charts |
+| JavaFX CSS | Modern dark theme styling, glassmorphic cards, and custom chart palettes |
 | JavaFX Maven Plugin 0.0.8 | Launching the JavaFX application with Maven |
 | JGit 7.1.0 | Pure Java Git commit history and churn analysis |
 | Jackson 2.18.2 | Snapshot serialization and JSON report export |
@@ -211,19 +222,23 @@ JavaComplexityAnalyzer/
 ├── README.md
 ├── testcode/                                 # Sample Java source files for testing
 └── src/
-    ├── main/java/com/complexityanalyzer/
-    │   ├── Main.java
-    │   ├── analysis/                         # ProjectAnalyzer, RiskCalculator, Diagnostics, Results
-    │   ├── architecture/                     # CycleDetector, GraphCentrality, PackageGraph
-    │   ├── dependency/                       # TypeResolver, DependencyAnalyzer, DependencyResult
-    │   ├── export/                           # Html, Json, Csv, Markdown report exporters
-    │   ├── git/                              # GitHistoryAnalyzer, HotspotRanker, FileGitStats
-    │   ├── metrics/                          # Cyclomatic, Cognitive, Cohesion (LCOM4), Lines (NCLOC)
-    │   ├── parser/                           # JavaFileParser, ProjectScanner, ParseFileResult
-    │   ├── qualitygate/                      # QualityGateConfig, Evaluator, Violations, Results
-    │   ├── regression/                       # SnapshotManager, SnapshotComparator, Diffs
-    │   ├── smells/                           # CodeSmellDetector, DuplicateCodeDetector, Locations, Advice
-    │   └── ui/                               # AnalyzerApp, DashboardCharts, DependencyGraphView, CodeViewerPane
+    ├── main/
+    │   ├── java/com/complexityanalyzer/
+    │   │   ├── Main.java
+    │   │   ├── analysis/                     # ProjectAnalyzer, RiskCalculator, Diagnostics, Results
+    │   │   ├── architecture/                 # CycleDetector, GraphCentrality, PackageGraph
+    │   │   ├── dependency/                   # TypeResolver, DependencyAnalyzer, DependencyResult
+    │   │   ├── export/                       # Html, Json, Csv, Markdown report exporters
+    │   │   ├── git/                          # GitHistoryAnalyzer, HotspotRanker, FileGitStats
+    │   │   ├── metrics/                      # Cyclomatic, Cognitive, Cohesion (LCOM4), Lines (NCLOC)
+    │   │   ├── parser/                       # JavaFileParser, ProjectScanner, ParseFileResult
+    │   │   ├── qualitygate/                  # QualityGateConfig, Evaluator, Violations, Results
+    │   │   ├── regression/                   # SnapshotManager, SnapshotComparator, Diffs
+    │   │   ├── smells/                       # CodeSmellDetector, DuplicateCodeDetector, Locations, Advice
+    │   │   └── ui/                           # AnalyzerApp, DashboardCharts, DependencyGraphView, CodeViewerPane
+    │   └── resources/
+    │       └── styles/
+    │           └── dark-theme.css            # Dark theme styling, UI design tokens, chart palette
     └── test/
         ├── java/com/complexityanalyzer/      # 10 test suites covering all analyzers & engine
         └── resources/samples/                # Test fixture files (simple, complex, cycles, broken)
